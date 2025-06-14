@@ -268,7 +268,7 @@ export default function Home() {
           {picture}
         </div>
         <h3 className="text-lg font-semibold mb-2">{title}</h3>
-        <p className="text-gray-600 dark:text-gray-400 w-3/4 lg:w-full">
+        <p className="text-gray-600 dark:text-gray-400  lg:w-full">
           {description}
         </p>
       </div>
@@ -441,7 +441,7 @@ export default function Home() {
             >
               How It Works
             </motion.h2>
-            <motion.h2 variants={itemVariants} className="text-4xl mt-4 mb-18">
+            <motion.h2 variants={itemVariants} className="text-4xl mt-4 mb-18 text-center">
               Leave the planning to us
             </motion.h2>
             <motion.div
@@ -488,8 +488,8 @@ export default function Home() {
               ))}
             </motion.div>
           </motion.section>
-          <footer className="w-full mt-16 p-4 border-t border-gray-500 dark:border-gray-600">
-            <div className="max-w-7xl mx-auto px-8">
+          <footer className="w-full mt-16 py-4 border-t border-gray-500 dark:border-gray-600">
+            <div className="max-w-7xl mx-auto">
               <div className="flex justify-end items-center align-middle">
                 <p className="text-gray-600 dark:text-gray-400">
                   © 2025 - Away
