@@ -4,9 +4,11 @@ import { ModeToggle } from "@/components/ModeToggle";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, ArrowRight } from "lucide-react";
 import Image from "next/image";
+import { createClient } from "@/utils/supabase/client";
+import { motion, useInView, Variants } from "framer-motion";
 
 const cardData = [
   {
@@ -45,7 +47,7 @@ const cardData = [
       "$500 - $1000",
       "$1000 - $5000",
       "$5000 - $10,000",
-      "$10,000 +",
+      "> $10,000",
       "Flexible",
     ],
     img: "https://images.unsplash.com/photo-1523289333742-be1143f6b766?auto=format&fit=crop&w=800&q=80",
@@ -159,6 +161,63 @@ function SelectionCard({
   );
 }
 
+function SplitText({
+  children,
+  className,
+}: {
+  children: string;
+  className?: string;
+}) {
+  const words = children.split(" ");
+
+  const container: Variants = {
+    hidden: { opacity: 0 },
+    visible: (i = 1) => ({
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.1 * i,
+      },
+    }),
+  };
+
+  const child: Variants = {
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        damping: 15,
+        stiffness: 80,
+      },
+    },
+    hidden: {
+      opacity: 0,
+      y: 20,
+      transition: {
+        type: "spring",
+        damping: 15,
+        stiffness: 80,
+      },
+    },
+  };
+
+  return (
+    <motion.div
+      className={className}
+      variants={container}
+      initial="hidden"
+      animate="visible"
+    >
+      {words.map((word, index) => (
+        <motion.span key={index} variants={child} className="inline-block mr-2">
+          {word}
+        </motion.span>
+      ))}
+    </motion.div>
+  );
+}
+
 export default function Home() {
   const [selected, setSelected] = useState({
     country: "Country",
@@ -170,6 +229,7 @@ export default function Home() {
   const [isFormValid, setIsFormValid] = useState(false);
   const [email, setEmail] = useState("");
   const router = useRouter();
+  const supabase = createClient();
 
   useEffect(() => {
     setIsFormValid(
@@ -181,16 +241,14 @@ export default function Home() {
     );
   }, [selected, email]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isFormValid) {
-      console.log({
-        country: selected.country,
-        activity: selected.activity,
-        group: selected.group,
-        budget: selected.budget,
-        email,
-      });
+      const { country, activity, group, budget } = selected;
+      await supabase
+        .from("signups")
+        .insert([{ country, activity, group, budget, email }])
+        .select();
       router.push("/coming");
     }
   };
@@ -206,46 +264,111 @@ export default function Home() {
   }) => {
     return (
       <div className="flex flex-col items-center text-center p-6">
-        <div className="w-100 h-80 rounded-full flex items-center justify-center mb-2">
+        <div className="w-90 h-80 rounded-full flex items-center justify-center mb-2">
           {picture}
         </div>
         <h3 className="text-lg font-semibold mb-2">{title}</h3>
-        <p className="text-gray-600 dark:text-gray-400">{description}</p>
+        <p className="text-gray-600 dark:text-gray-400 w-3/4 lg:w-full">
+          {description}
+        </p>
       </div>
     );
   };
+
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+        delayChildren: 0.2,
+      },
+    },
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.8,
+        ease: [0.4, 0, 0.2, 1],
+      },
+    },
+  };
+
+  const scrollVariants: Variants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 1,
+        ease: [0.4, 0, 0.2, 1],
+      },
+    },
+  };
+
+  // Refs for scroll animations
+  const formRef = useRef(null);
+  const howItWorksRef = useRef(null);
+
+  // useInView hooks
+  const formInView = useInView(formRef, { once: true, margin: "-100px" });
+  const howItWorksInView = useInView(howItWorksRef, {
+    once: true,
+    margin: "-100px",
+  });
 
   return (
     <div className="min-h-screen flex flex-col">
       <main className="flex-1 w-full flex flex-col items-center px-8">
         <div className="w-full max-w-7xl mx-auto">
           {/* Navigation Bar */}
-          <nav className="py-6 flex justify-between items-center">
+          <motion.nav
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+            className="py-6 flex justify-between items-center"
+          >
             <p>Away</p>
             <ModeToggle />
-          </nav>
+          </motion.nav>
 
-          <h1 className="text-center text-3xl sm:text-5xl my-8 sm:mt-16">
+          <SplitText className="text-center text-3xl sm:text-5xl my-8 sm:mt-16">
             Your Mystery Adventure Awaits
-          </h1>
-          <h2 className="text-center text-xl text-gray-500 mb-8">
+          </SplitText>
+
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            className="text-center text-xl text-gray-500 mb-8"
+          >
             Select your travel preferences
-          </h2>
+          </motion.h2>
 
           {/* Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-16">
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-16"
+          >
             {cardData.map((card, idx) => (
-              <SelectionCard
-                key={idx}
-                label={card.label}
-                highlight={
-                  selected[card.key as keyof typeof selected] || card.default
-                }
-                img={card.img}
-                onClick={() => setModal(card.key as keyof typeof selected)}
-              />
+              <motion.div key={idx} variants={itemVariants}>
+                <SelectionCard
+                  label={card.label}
+                  highlight={
+                    selected[card.key as keyof typeof selected] || card.default
+                  }
+                  img={card.img}
+                  onClick={() => setModal(card.key as keyof typeof selected)}
+                />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
 
           {/* Modals */}
           {cardData.map((card) => (
@@ -262,7 +385,13 @@ export default function Home() {
           ))}
 
           {/* Title and form */}
-          <section className="flex flex-col items-center">
+          <motion.section
+            ref={formRef}
+            variants={scrollVariants}
+            initial="hidden"
+            animate={formInView ? "visible" : "hidden"}
+            className="flex flex-col items-center"
+          >
             {/* Email Input and CTA */}
             <form
               onSubmit={handleSubmit}
@@ -288,77 +417,90 @@ export default function Home() {
                 Surprise Me
               </Button>
             </form>
-          </section>
+          </motion.section>
 
           {/* Divider */}
-          <div className="w-16 h-[2px] bg-gray-600 mx-auto my-16"></div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.4, ease: [0.4, 0, 0.2, 1] }}
+            className="w-16 h-[2px] bg-gray-600 mx-auto my-16"
+          ></motion.div>
 
           {/* How it works section */}
-          <section className="flex flex-col items-center">
-            <h2 className="text-lg tracking-[1px] uppercase font-semibold">
+          <motion.section
+            ref={howItWorksRef}
+            variants={scrollVariants}
+            initial="hidden"
+            animate={howItWorksInView ? "visible" : "hidden"}
+            className="flex flex-col items-center"
+          >
+            <motion.h2
+              variants={itemVariants}
+              className="text-lg tracking-[1px] uppercase font-semibold"
+            >
               How It Works
-            </h2>
-            <h2 className="text-4xl mt-4 mb-18">Leave the planning to us</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-16 w-full">
-              <Card
-                picture={
-                  <div className="w-100 h-80 mb-8 relative">
-                    <Image
-                      src="/1.png"
-                      alt="Share Preferences"
-                      fill
-                      className="object-cover rounded-md"
-                      style={{ objectFit: "cover" }}
-                    />
-                  </div>
-                }
-                title="Share Your Preferences"
-                description="Tell us your travel preferences, availability, interests, budget, and any other must-haves to help us craft your perfect trip"
-              />
-              <Card
-                picture={
-                  <div className="w-100 h-80 mb-8 relative">
-                    <Image
-                      src="/2.jpg"
-                      alt="Collect Travel Package"
-                      fill
-                      className="object-cover rounded-md"
-                      style={{ objectFit: "cover" }}
-                    />
-                  </div>
-                }
-                title="Collect Your Travel Package"
-                description="Collect your personalized travel package at the airport, containing details of your mystery destination and itinerary"
-              />
-              <Card
-                picture={
-                  <div className="w-100 h-80 mb-8 relative">
-                    <Image
-                      src="/3.jpg"
-                      alt="Begin Adventure"
-                      fill
-                      className="object-cover rounded-md"
-                      style={{ objectFit: "cover" }}
-                    />
-                  </div>
-                }
-                title="Begin Your Adventure"
-                description="Embark on the journey to your mystery destination and let the adventure unfold, backed by our 24/7 support team"
-              />
+            </motion.h2>
+            <motion.h2 variants={itemVariants} className="text-4xl mt-4 mb-18">
+              Leave the planning to us
+            </motion.h2>
+            <motion.div
+              variants={containerVariants}
+              className="grid grid-cols-1 lg:grid-cols-3 gap-16 w-full"
+            >
+              {[
+                {
+                  picture: "/1.png",
+                  title: "Share Your Preferences",
+                  description:
+                    "Tell us your travel preferences, availability, interests, budget, and any other must-haves to help us craft your perfect trip",
+                },
+                {
+                  picture: "/2.jpg",
+                  title: "Collect Your Travel Package",
+                  description:
+                    "Collect your personalized travel package at the airport, containing details of your mystery destination and itinerary",
+                },
+                {
+                  picture: "/3.jpg",
+                  title: "Begin Your Adventure",
+                  description:
+                    "Embark on the journey to your mystery destination and let the adventure unfold, backed by our 24/7 support team",
+                },
+              ].map((card, idx) => (
+                <motion.div key={idx} variants={itemVariants}>
+                  <Card
+                    picture={
+                      <div className="w-100 h-80 mb-8 relative">
+                        <Image
+                          src={card.picture}
+                          alt={card.title}
+                          fill
+                          className="object-cover rounded-md"
+                          style={{ objectFit: "cover" }}
+                        />
+                      </div>
+                    }
+                    title={card.title}
+                    description={card.description}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          </motion.section>
+          <footer className="w-full mt-16 p-4 border-t border-gray-500 dark:border-gray-600">
+            <div className="max-w-7xl mx-auto px-8">
+              <div className="flex justify-end items-center align-middle">
+                <p className="text-gray-600 dark:text-gray-400">
+                  © 2025 - Away
+                </p>
+              </div>
             </div>
-          </section>
+          </footer>
         </div>
       </main>
 
       {/* Footer Section */}
-      <footer className="w-full mt-16 p-4">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="h-[1px] bg-gray-600"></div>
-          <div className="flex justify-end mt-4 items-center align-middle">
-            <p className="">© 2025 - Away</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
